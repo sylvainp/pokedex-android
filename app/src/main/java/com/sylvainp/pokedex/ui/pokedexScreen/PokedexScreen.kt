@@ -2,6 +2,7 @@ package com.sylvainp.pokedex.ui.pokedexScreen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -14,17 +15,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.sylvainp.pokedex.ui.components.PKPokemonCard
 import com.sylvainp.pokedex.ui.components.PKTopbarPokedex
 import com.sylvainp.pokedex.ui.theme.medium
 import com.sylvainp.pokedex.ui.theme.primary
 import com.sylvainp.pokedex.ui.theme.white
+import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -34,10 +37,7 @@ fun PokedexScreen(
     viewmodel: PokedexViewmodel
 ) {
 
-    LaunchedEffect(key1 = Unit, block = {
-        viewmodel.loadPokemons();
-    });
-
+    val pokemons = viewmodel.loadPokemons().collectAsLazyPagingItems()
 
     Scaffold(
         topBar = {
@@ -56,58 +56,67 @@ fun PokedexScreen(
             horizontalAlignment = Alignment.CenterHorizontally
 
         ) {
-            if (viewmodel.uiState.data !== null) {
-                Column(
-                    modifier = Modifier
-                        .background(Color.Transparent, shape = RoundedCornerShape(8.dp)),
+            Column(
+                modifier = Modifier
+                    .background(white, shape = RoundedCornerShape(8.dp))
+                    .fillMaxSize(),
 
-                    horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
 
-                ) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        content = {
-                            items(viewmodel.uiState.data!!.size) { index ->
-                                val pokemonPreviewEntity = viewmodel.uiState.data!![index];
-                                PKPokemonCard(
-                                    pokemon = pokemonPreviewEntity,
-                                    onButtonClicked = {
-                                        navHostController.navigate(
-                                            "pokedex/${pokemonPreviewEntity.mainType}/${pokemonPreviewEntity.id}/${pokemonPreviewEntity.name}/${
-                                                URLEncoder.encode(
-                                                    pokemonPreviewEntity.image,
-                                                    "UTF-8"
-                                                )
-                                            }"
-                                        )
-                                    },
-                                    modifier = Modifier.padding(4.dp)
-                                )
-
-                                if ((index + 1 == viewmodel.uiState.data!!.size - 2) && !viewmodel.uiState.loadingNext) {
-                                    viewmodel.loadPokemons()
-                                }
-
-                            }
-                        },
+            ) {
+                when (pokemons.loadState.refresh) {
+                    is LoadState.Loading -> CircularProgressIndicator(
+                        color = medium,
                         modifier = Modifier
-                            .background(white, shape = RoundedCornerShape(8.dp))
-                            .padding(8.dp, 8.dp)
-                            .weight(1f)
-
+                            .padding(16.dp)
+                            .width(24.dp)
+                            .height(24.dp)
                     )
-                    if (viewmodel.uiState.loadingNext) {
-                        CircularProgressIndicator(
-                            color = medium,
+
+                    is LoadState.NotLoading -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            content = {
+                                items(pokemons.itemCount) { index ->
+                                    val pokemonPreviewEntity = pokemons[index];
+                                    PKPokemonCard(
+                                        pokemon = pokemonPreviewEntity!!,
+                                        onButtonClicked = {
+                                            navHostController.navigate(
+                                                "pokedex/${pokemonPreviewEntity.mainType}/${pokemonPreviewEntity.id}/${pokemonPreviewEntity.name}/${
+                                                    URLEncoder.encode(
+                                                        pokemonPreviewEntity.image,
+                                                        "UTF-8"
+                                                    )
+                                                }"
+                                            )
+                                        },
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
+                            },
                             modifier = Modifier
-                                .padding(16.dp)
-                                .width(24.dp)
-                                .height(24.dp)
+                                .background(white, shape = RoundedCornerShape(8.dp))
+                                .padding(8.dp, 8.dp)
+                                .weight(1f)
+
                         )
+                        if (pokemons.loadState.append == LoadState.Loading) {
+                            CircularProgressIndicator(
+                                color = medium,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(24.dp)
+                                    .height(24.dp)
+                            )
+                        }
+                    }
+
+                    else -> {
+                        println("Aïe !")
                     }
                 }
-
-
             }
         }
     }

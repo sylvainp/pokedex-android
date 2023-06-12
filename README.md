@@ -11,6 +11,7 @@ Le design de l'application a été fait par [Ricardo Schiniegoski](https://www.f
 - 💉 : Hilt
 - 📊 : OkHttp pour les appels API
 - 🤹‍ : Mockito
+- 📖 : Paging 3
 
 
 | Grille des pokemons | Détail d'un pokemon |
